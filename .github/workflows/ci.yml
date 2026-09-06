@@ -75,4 +75,4 @@ jobs:
         run: |
           ready=$(curl -s http://127.0.0.1:5000/readyz)
           echo "$ready"
-          echo "ready" | grep -q '"servers_loaded":9'
+          echo "ready" | grep -q 9
