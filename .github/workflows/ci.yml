@@ -49,6 +49,9 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
 
+    env:
+      APP_VERSION: ci-${{ github.run_number }}
+
     steps:
       - name: Checkout code 
         uses: actions/checkout@v4
@@ -71,8 +74,15 @@ jobs:
           code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/healthz)
           test "$code" = "200" 
 
-      - name: Check ready~ endpoint
+      - name: Check ready endpoint
         run: |
           ready=$(curl -s http://127.0.0.1:5000/readyz)
           echo "$ready"
           [[ "$ready" == *'"servers_loaded":9'* ]]
+
+      - name: Check version endpoint
+        run: |
+          version=$(curl -s http://127.0.0.1:5000/version)
+          echo "got $version"
+          test "$version" = "ci-${{ github.run_number }}"
+      
