@@ -60,3 +60,8 @@ jobs:
 
       - name: Install dependendcies
         run: pip install -r requirements.txt
+
+      - name: Start application
+        run: |
+          python app.py &
+          sleep 5 
