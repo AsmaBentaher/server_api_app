@@ -1,6 +1,6 @@
 # server-inventory-api
 
-<!-- Homework task 8: put your workflow status badge on the line below -->
+[![CI](https://github.com/AsmaBentaher/server_api_app/actions/workflows/ci.yml/badge.svg)](https://github.com/AsmaBentaher/server_api_app/actions/workflows/ci.yml)
 
 A small Flask API over a JSON server inventory. Used in the DevOps Engineering
 Bootcamp, Course 07 (CI/CD).
