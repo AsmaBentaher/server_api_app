@@ -32,4 +32,4 @@ jobs:
         run: flake8 .
 
       - name: Run tests
-        run pytest -q --junitxml=results.xml
+        run pytest -q --junitxml=report.xml
