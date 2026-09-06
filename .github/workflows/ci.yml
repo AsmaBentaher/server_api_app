@@ -13,6 +13,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    id: "h6v7e7"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,3 +26,10 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+
+      - name: Lint with flake8
+        run: flake8 .
+
+      - name: Run tests
+        run pytest -q --junitxml=results.xml
