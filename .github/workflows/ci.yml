@@ -71,7 +71,7 @@ jobs:
           code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/healthz)
           test "$code" = "200" 
 
-      - name: Check readiness endpoint
+      - name: Check ready endpoint
         run: |
           ready=$(curl -s http://127.0.0.1:5000/readyz)
           echo "$ready"
