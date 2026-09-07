@@ -1,85 +1,155 @@
+# The name displayed for this workflow in the GitHub Actions tab.
 name: CI
 
+# Defines the events that trigger this workflow.
 on:
+
+  # Run the workflow whenever code is pushed to the main branch.
   push:
     branches:
       - main
+
+  # Run the workflow whenever a Pull Request targets the main branch.
   pull_request:
     branches:
       - main
+
+   # Allows us to manually start the workflow from GitHub's Actions interface.
   workflow_dispatch:
 
+# Defines all jobs that belong to this workflow.
 jobs:
+
+  # First job: run the linter and automated tests.
   test:
+    # GitHub creates a fresh Ubuntu virtual machine for this job.
     runs-on: ubuntu-latest
 
+    # Defines how this job should run multiple configurations.
     strategy:
+      # If one matrix run fails, GitHub will NOT cancel the other run.
       fail-fast: false
+      # Run the same job using multiple Python versions.
       matrix:
         python-version: ["3.11", "3.12"]
 
+    # The individual steps executed by the test job.
     steps:
+
+      # Download the repository's code onto the GitHub runner.
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Install the Python version specified by the matrix.
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
+          # Use either Python 3.11 or 3.12 depending on the matrix run.
           python-version: ${{ matrix.python-version}}
+          # Cache pip packages so future workflow runs can install
+          # dependencies faster when the requirements have not changed.
           cache: "pip"
 
+      # Install Flask, pytest, flake8, requests, and other
+      # packages listed in requirements.txt.
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-
+      # Run the Flake8 linter to check the Python code for
+      # style problems and certain coding errors.
       - name: Lint with flake8
         run: flake8 .
 
+      # Run all pytest tests and generate a JUnit XML test report.
+      # The report is saved as report.xml in the runner's workspace.
       - name: Run tests
         run: pytest -q --junitxml=report.xml
 
+      # Save the generated test report as a GitHub Actions artifact.
       - name: Upload test report
         uses: actions/upload-artifact@v4
         with:
+          # Name that will be displayed for the uploaded artifact.
           name: test-report
+          # File that should be uploaded.
           path: report.xml
 
 
+  # Second job: perform smoke tests against the running API.
   smoke:
+
+    # Do not start this job until the entire test job succeeds.
     needs: test
+    # Run this job on another fresh Ubuntu virtual machine.
     runs-on: ubuntu-latest
 
+    # Environment variables available to all steps in this job.
     env:
+      # Give the application a version based on the GitHub Actions workflow run number.
       APP_VERSION: ci-${{ github.run_number }}
 
+    # Individual steps of the smoke job.
     steps:
+
+      # Download the repository code onto this new runner.
       - name: Checkout code 
         uses: actions/checkout@v4
 
+      # Install Python 3.12 on the smoke-test runner.
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
+
+      # Install the application's dependencies again.
+      # This is necessary because smoke is running on a completely
+      # new machine and does not have anything from the test job.
       - name: Install dependendcies
         run: pip install -r requirements.txt
 
+      # Start the Flask application in the background.
       - name: Start application
+
+        # The & runs the application in the background so the
+        # workflow can continue executing the next commands.
+        # Wait five seconds to give Flask time to start listening
+          # on port 5000 before we send requests to it.
+
         run: |
           python app.py &
           sleep 5 
 
+      # Verify that the health endpoint returns HTTP status 200.
       - name: Run health endpoint
+        # Send a request to /healthz.
+        # -s means silent mode.
+        # -o /dev/null discards the response body.
+        # -w "%{http_code}" prints only the HTTP status code.
+        # The test succeeds only if the status code is exactly 200.
         run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/healthz)
+          
           test "$code" = "200" 
 
+      # Verify that the application successfully loaded all 9 servers.
       - name: Check ready endpoint
+        # Call the readiness endpoint and save its response.
+        # Print the response to the GitHub Actions log.
+        # Check that the response contains "servers_loaded":9.
+        # If it does not, the command returns a non-zero exit code
+        # and GitHub marks this step as failed.
         run: |
           ready=$(curl -s http://127.0.0.1:5000/readyz)
           echo "$ready"
           [[ "$ready" == *'"servers_loaded":9'* ]]
 
+
+      # Verify that the application received the CI build number.
+      # Call /version and store the JSON response.
+      # Print the returned version in the workflow log.
+      # Check that the response contains the expected CI version.
+      # For example, if this is run #23, it checks for "ci-23".
       - name: Check version endpoint
         run: |
           version=$(curl -s http://127.0.0.1:5000/version)
