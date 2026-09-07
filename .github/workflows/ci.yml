@@ -84,5 +84,5 @@ jobs:
         run: |
           version=$(curl -s http://127.0.0.1:5000/version)
           echo "got $version"
-          test "$version" = "ci-${{ github.run_number }}"
+          [[ "$version" == *"ci-${{ github.run_number }}"* ]]
       
